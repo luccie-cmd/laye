@@ -37,6 +37,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 #include <ctype.h>
 
 #ifdef _WIN32
@@ -278,8 +279,9 @@ int nob_file_exists(const char *file_path);
         if (rebuild_is_needed < 0) exit(1);                                                  \
         if (rebuild_is_needed) {                                                             \
             Nob_String_Builder sb = {0};                                                     \
+            nob_sb_append_cstr(&sb, "\"");                                                   \
             nob_sb_append_cstr(&sb, binary_path);                                            \
-            nob_sb_append_cstr(&sb, ".old");                                                 \
+            nob_sb_append_cstr(&sb, ".old\"");                                               \
             nob_sb_append_null(&sb);                                                         \
                                                                                              \
             if (!nob_rename(binary_path, sb.items)) exit(1);                                 \
@@ -592,12 +594,12 @@ bool nob_proc_wait(Nob_Proc proc)
 
 Nob_Proc_Result nob_proc_wait_result(Nob_Proc proc)
 {
-    Nob_Proc_Result result = {
+    Nob_Proc_Result proc_result = {
         .exit_code = 0,
         .exited = false,
     };
 
-    if (proc == NOB_INVALID_PROC) return result;
+    if (proc == NOB_INVALID_PROC) return proc_result;
 
 #ifdef _WIN32
     DWORD result = WaitForSingleObject(
@@ -607,31 +609,31 @@ Nob_Proc_Result nob_proc_wait_result(Nob_Proc proc)
 
     if (result == WAIT_FAILED) {
         nob_log(NOB_ERROR, "could not wait on child process: %lu", GetLastError());
-        return result;
+        return proc_result;
     }
 
     DWORD exit_status;
     if (!GetExitCodeProcess(proc, &exit_status)) {
         nob_log(NOB_ERROR, "could not get process exit code: %lu", GetLastError());
-        return result;
+        return proc_result;
     }
 
     if (exit_status != 0) {
         nob_log(NOB_ERROR, "command exited with exit code %lu", exit_status);
     }
 
-    result.exit_code = (int)exit_status;
-    result.exited = true;
+    proc_result.exit_code = (int)exit_status;
+    proc_result.exited = true;
 
     CloseHandle(proc);
 
-    return result;
+    return proc_result;
 #else
     for (;;) {
         int wstatus = 0;
         if (waitpid(proc, &wstatus, 0) < 0) {
             nob_log(NOB_ERROR, "could not wait on command (pid %d): %s", proc, strerror(errno));
-            return result;
+            return proc_result;
         }
 
         if (WIFEXITED(wstatus)) {
@@ -642,19 +644,19 @@ Nob_Proc_Result nob_proc_wait_result(Nob_Proc proc)
             }
 #endif
 
-            result.exit_code = exit_status;
-            result.exited = true;
+            proc_result.exit_code = exit_status;
+            proc_result.exited = true;
 
             break;
         }
 
         if (WIFSIGNALED(wstatus)) {
             nob_log(NOB_ERROR, "command process was terminated");
-            return result;
+            return proc_result;
         }
     }
 
-    return result;
+    return proc_result;
 #endif
 }
 

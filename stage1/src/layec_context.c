@@ -266,6 +266,17 @@ void layec_context_destroy(layec_context* context) {
     lca_deallocate(allocator, context);
 }
 
+// Function to get all the `\n`
+static int64_t get_lines_from_data(char* data, int64_t count){
+    int64_t lines = 0;
+    for(int64_t i = 0; i < count; i++){
+        if(data[i] == '\n'){
+            lines++;
+        }
+    }
+    return lines;
+}
+
 static int read_file_to_string(lca_allocator allocator, string file_path, string* out_contents) {
     assert(out_contents != NULL);
     const char* file_path_cstr = string_as_cstring(file_path);
@@ -281,7 +292,12 @@ static int read_file_to_string(lca_allocator allocator, string file_path, string
     fread(data, (size_t)count, 1, stream);
     data[count] = 0;
     fclose(stream);
-    *out_contents = string_from_data(allocator, data, count, count + 1);
+    // Windows likes to append some extra characters to the end of some files so remove them
+    int64_t lines = 0;
+#ifdef _WIN32
+    lines = get_lines_from_data(data, count);
+#endif
+    *out_contents = string_from_data(allocator, data, count - lines, count + 1);
     return 0;
 }
 

@@ -112,9 +112,16 @@ const char* lca_plat_self_exe(void) {
         return NULL;
     }
     return lca_temp_sprintf("%s", buffer);
-#elif define(_WIN32)
-    assert(false && "lca_plat_self_exe is not implemented on this platform");
-    return NULL;
+#elif defined(_WIN32)
+    char buffer[MAX_PATH];
+    DWORD n = GetModuleFileName(NULL, buffer, MAX_PATH);
+    if (n == 0) {
+        // GetModuleFileName failed
+        return NULL;
+    }
+    // Ensure null-termination
+    buffer[n] = '\0';
+    return strdup(buffer); // Don't forget to free the memory after use
 #else
     assert(false && "lca_plat_self_exe is not implemented on this platform");
     return NULL;
