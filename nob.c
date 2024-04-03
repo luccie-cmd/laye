@@ -36,7 +36,7 @@
 #define NOB_IMPLEMENTATION
 #include "stage1/include/nob.h"
 
-static bool no_asan = true; // TODO(luccie-cmd): Undo this before commiting
+static bool no_asan;
 
 static const char* stage1_laye_headers_dir = "./stage1/include/";
 
